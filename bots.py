@@ -253,7 +253,7 @@ async def on_ready():
 # =========================
 
 async def set_presence():
-    """Устанавливает красивый статус бота с онлайном Memphis"""
+    """Устанавливает статус бота с онлайном и очередью Memphis"""
     srv = await get_memphis_online()
 
     # Если API не ответил — показываем красный кружок
@@ -266,21 +266,28 @@ async def set_presence():
         return
 
     players = srv.get("players", 0)
+    queued = srv.get("queuedPlayers", 0)
+    
     players_str = f"{players:,}" if isinstance(players, int) else str(players)
+    queued_str = f"{queued:,}" if isinstance(queued, int) else str(queued)
 
-    # Проверяем, работает ли сервер (status + тех. работы)
+    # Проверяем, работает ли сервер
     is_online = srv.get("status", False) and not srv.get("techWorks", False)
 
     if is_online:
         circle = "🟢"
-        state = "Онлайн"
+        # Если очередь есть — показываем её, если нет — только онлайн
+        if queued and queued > 0:
+            status_text = f"{circle} Memphis | {players_str} | В очереди: {queued_str}"
+        else:
+            status_text = f"{circle} Memphis | Онлайн: {players_str}"
     else:
         circle = "🔴"
-        state = "Тех. работы"
+        status_text = f"{circle} Memphis | Тех. работы"
 
     activity = discord.Activity(
         type=discord.ActivityType.watching,
-        name=f"{circle} Memphis | {state}: {players_str}"
+        name=status_text
     )
     await bot.change_presence(activity=activity)
 
