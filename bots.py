@@ -508,8 +508,13 @@ class MainMenuView(View):
     async def song_callback(self, interaction: discord.Interaction, button: Button):
         modal = SongModal()
         await interaction.response.send_modal(modal)
-
-
+     
+      # Кнопка: Поиск игрока
+    @discord.ui.button(label="🔍 Игрок", style=discord.ButtonStyle.secondary, custom_id="player_btn")
+    async def player_callback(self, interaction: discord.Interaction, button: Button):
+        modal = PlayerModal()
+        await interaction.response.send_modal(modal)
+     
 # =========================
 # МОДАЛЬНЫЕ ОКНА (для ввода данных)
 # =========================
@@ -615,6 +620,57 @@ class SongModal(Modal, title="🎵 Найти песню"):
         
         await interaction.followup.send(embed=embed, ephemeral=True)
 
+class PlayerModal(Modal, title="🔍 Поиск игрока"):
+    static_id = TextInput(
+        label="Static ID игрока",
+        style=discord.TextStyle.short,
+        placeholder="Например: 12345",
+        required=True,
+        max_length=10
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        try:
+            sid = int(self.static_id.value)
+        except ValueError:
+            return await interaction.followup.send(" Static ID должен быть числом!", ephemeral=True)
+        
+        data = await get_player_info(sid)
+        
+        if not data:
+            return await interaction.followup.send("❌ Ошибка при запросе к API.", ephemeral=True)
+        
+        if data.get("error") == "no_token":
+            return await interaction.followup.send(
+                "️ Для просмотра профилей нужен AUTH_TOKEN в настройках бота (Majestic ID авторизация).",
+                ephemeral=True
+            )
+        
+        if not data.get("status"):
+            return await interaction.followup.send(
+                f"❌ Ошибка API: {data.get('errorDescription', 'Игрок не найден или нет доступа')}",
+                ephemeral=True
+            )
+        
+        res = data.get("result", {})
+        embed = discord.Embed(
+            title=f"👤 Профиль игрока",
+            color=discord.Color.blue()
+        )
+        embed.add_field(name="🆔 Static ID", value=f"`{sid}`", inline=True)
+        embed.add_field(name="👤 Никнейм", value=res.get("name", "Неизвестно"), inline=True)
+        
+        # Если есть дополнительные данные — добавляем
+        if res.get("level"):
+            embed.add_field(name="⭐ Уровень", value=str(res.get("level")), inline=True)
+        if res.get("faction"):
+            embed.add_field(name="🏛️ Фракция", value=res.get("faction"), inline=True)
+        
+        embed.set_footer(text=f"Запросил: {interaction.user.display_name}")
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 # =========================
 # КОМАНДА /menu
@@ -623,8 +679,16 @@ class SongModal(Modal, title="🎵 Найти песню"):
 @bot.tree.command(name="menu", description="Открыть главное меню бота")
 async def menu(interaction: discord.Interaction):
     embed = discord.Embed(
-        title="🤖 White Kings Bot",
-        description="Выбери действие:",
+        title=" White Kings Bot",
+        description=(
+            "Выбери действие:\n"
+            "🌆 **Онлайн** — онлайн сервера\n"
+            "🤖 **ИИ** — задать вопрос\n"
+            "💰 **Доход /  Расход** — финансы\n"
+            "📊 **Отчёт** — статистика семьи\n"
+            "🎵 **Песня** — найти трек\n"
+            "🔍 **Игрок** — поиск по Static ID"
+        ),
         color=discord.Color.blue()
     )
     embed.set_footer(text="Нажми на кнопку ниже")
