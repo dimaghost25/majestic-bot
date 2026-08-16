@@ -424,7 +424,6 @@ async def ask(interaction: discord.Interaction, question: str):
     embed.set_footer(text=f"Запросил: {interaction.user.display_name}")
     
     await interaction.followup.send(embed=embed)
-from discord.ui import View, Button, Modal, TextInput
 
 # =========================
 # КНОПОЧНОЕ МЕНЮ
