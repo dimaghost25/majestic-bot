@@ -361,7 +361,6 @@ async def online(interaction: discord.Interaction):
     status = srv.get("status", False)
 
     embed = discord.Embed(title=f"🌆 Сервер: {name}", color=discord.Color.green())
-    
     players_str = f"{players:,}" if isinstance(players, int) else str(players)
     queued_str = f"{queued:,}" if isinstance(queued, int) else str(queued)
 
@@ -369,7 +368,6 @@ async def online(interaction: discord.Interaction):
     embed.add_field(name="⏳ В очереди", value=f"**{queued_str}**", inline=True)
     embed.add_field(name="🟢 Статус", value="Работает" if status else "Тех. работы", inline=True)
     embed.set_footer(text="Данные обновляются автоматически")
-
     await interaction.followup.send(embed=embed)
 
 
@@ -380,19 +378,17 @@ async def player(interaction: discord.Interaction, static_id: int):
     data = await get_player_info(static_id)
 
     if not data:
-        await interaction.followup.send("❌ Ошибка при запросе к API.")
+        await interaction.followup.send("❌ Ошибка при запросе к API.", ephemeral=True)
         return
-
     if data.get("error") == "no_token":
         await interaction.followup.send("⚠️ Для просмотра профилей нужен AUTH_TOKEN в настройках бота.", ephemeral=True)
         return
-
     if not data.get("status"):
-        await interaction.followup.send(f"❌ Ошибка API: {data.get('errorDescription', 'Игрок не найден или нет доступа')}", ephemeral=True)
+        await interaction.followup.send(f"❌ Ошибка API: {data.get('errorDescription', 'Игрок не найден')}", ephemeral=True)
         return
 
     res = data.get("result", {})
-    embed = discord.Embed(title=f"Профиль игрока (Static ID: {static_id})", color=discord.Color.blue())
+    embed = discord.Embed(title=f"👤 Профиль игрока (Static ID: {static_id})", color=discord.Color.blue())
     embed.add_field(name="Никнейм", value=res.get("name", "Неизвестно"), inline=False)
     await interaction.followup.send(embed=embed)
 
@@ -408,12 +404,12 @@ async def test_player(interaction: discord.Interaction, static_id: int):
     
     if not AUTH_TOKEN:
         print("DEBUG: Токен не найден!")
-        return await interaction.followup.send("⚠️ Для просмотра профилей нужен AUTH_TOKEN в настройках бота.", ephemeral=True)
+        return await interaction.followup.send("⚠️ Для просмотра профилей нужен AUTH_TOKEN.", ephemeral=True)
 
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
         "Cookie": AUTH_TOKEN,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Accept": "application/json, text/plain, */*"
     }
     url = f"{MAJESTIC_ID_API}/{TARGET_SERVER_ID}/{static_id}/main"
@@ -438,12 +434,12 @@ async def test_player(interaction: discord.Interaction, static_id: int):
                 embed = discord.Embed(title=f"👤 Профиль игрока", color=discord.Color.blue())
                 embed.add_field(name="🆔 Static ID", value=f"`{static_id}`", inline=True)
                 embed.add_field(name="👤 Никнейм", value=res.get("name", "Неизвестно"), inline=True)
-                
                 await interaction.followup.send(embed=embed, ephemeral=True)
                 
     except Exception as e:
         print(f"DEBUG: Исключение при запросе: {e}")
         await interaction.followup.send(f"❌ Произошла ошибка: {e}", ephemeral=True)
+
 
 
  
