@@ -345,7 +345,6 @@ async def online(interaction: discord.Interaction):
 
     await interaction.followup.send(embed=embed)
 
-
 @bot.tree.command(name="online", description="Показать онлайн сервера Memphis (Majestic RP)")
 async def online(interaction: discord.Interaction):
     await interaction.response.defer()
@@ -440,27 +439,6 @@ async def test_player(interaction: discord.Interaction, static_id: int):
         print(f"DEBUG: Исключение при запросе: {e}")
         await interaction.followup.send(f"❌ Произошла ошибка: {e}", ephemeral=True)
 
-
-
- 
-    res = data.get("result", {})
-    embed = discord.Embed(
-        title=f"Профиль игрока (Static ID: {static_id})",
-        color=discord.Color.blue()
-    )
-    embed.add_field(name="Никнейм", value=res.get("name", "Неизвестно"), inline=False)
-
-    await interaction.followup.send(embed=embed)
-
-
-@bot.tree.command(name="add_income", description="Добавить доход в казну семьи")
-@app_commands.describe(amount="Сумма", reason="Причина (например: Контракт)")
-async def add_income(interaction: discord.Interaction, amount: int, reason: str = "Без причины"):
-    if not has_permission(interaction):
-        return await interaction.response.send_message("❌ Нет прав.", ephemeral=True)
-
-    add_transaction(interaction.guild.id, "income", amount, reason, interaction.user.id)
-    await interaction.response.send_message(f"✅ Доход **{amount:,}$** ({reason}) успешно записан!")
 
 
 @bot.tree.command(name="add_expense", description="Добавить расход из казны семьи")
