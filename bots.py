@@ -13,13 +13,11 @@ import aiohttp
 from flask import Flask
 import threading
 
-# Загружаем переменные из .env
+#1 Загружаем переменные из .env
 load_dotenv()
 print("DEBUG TOKEN:", os.getenv("DISCORD_TOKEN"))   
  
-# =========================
-# НАСТРОЙКИ ИЗ .env
-# =========================
+#2 НАСТРОЙКИ ИЗ .env
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 AUTH_TOKEN = os.getenv("AUTH_TOKEN", "")
@@ -34,9 +32,7 @@ TARGET_SERVER_ID = "ru19"  # Memphis
 MAJESTIC_GENERAL_API = "https://api.majestic-files.com/meta/servers"
 MAJESTIC_ID_API = "https://api.majestic-files.com/id"
 
-# =========================
-# БОТ И БАЗА
-# =========================
+#3 БОТ И БАЗА
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -129,9 +125,7 @@ def get_family_report(guild_id: int):
     }
 
 
-# =========================
-# API MAJESTIC RP
-# =========================
+#4 API MAJESTIC RP
 
 async def fetch_json(url: str, headers=None):
     default_headers = {
@@ -196,9 +190,7 @@ async def get_player_info(static_id: int):
     return result
 
 
-# =========================
-# ПРОВЕРКА ПРАВ
-# =========================
+#5 ПРОВЕРКА ПРАВ
 
 def has_permission(interaction: discord.Interaction) -> bool:
     if not FAMILY_MANAGER_ROLE_ID:
@@ -208,9 +200,7 @@ def has_permission(interaction: discord.Interaction) -> bool:
         return True
     return any(role.id == FAMILY_MANAGER_ROLE_ID for role in member.roles)
 
-# =========================
-# ИИ-АССИСТЕНТ (Qwen через Hugging Face)
-# =========================
+#6 ИИ-АССИСТЕНТ (Qwen через Hugging Face)
 
 hf_client = AsyncInferenceClient(
     token=os.getenv("HF_TOKEN"),
@@ -237,9 +227,7 @@ async def ask_ai(question: str) -> str:
         print(f"AI Error: {e}")
         return "⚠️ Не удалось получить ответ от ИИ. Попробуй позже."
 
-# =========================
-# КОМАНДЫ
-# =========================
+#7 КОМАНДЫ
 
 @bot.event
 async def on_ready():
@@ -261,9 +249,7 @@ async def on_ready():
     update_online_channel.start()
     update_presence.start()
     
-# =========================
-# СТАТУС БОТА С ОНЛАЙНОМ
-# =========================
+#8 СТАТУС БОТА С ОНЛАЙНОМ
 
 async def set_presence():
     """Устанавливает статус бота с онлайном и очередью Memphis"""
@@ -445,9 +431,7 @@ async def ask(interaction: discord.Interaction, question: str):
     
     await interaction.followup.send(embed=embed)
 
-# =========================
-# КНОПОЧНОЕ МЕНЮ
-# =========================
+#9 КНОПОЧНОЕ МЕНЮ
 
 class MainMenuView(View):
     def __init__(self):
@@ -535,9 +519,7 @@ class MainMenuView(View):
         modal = PlayerModal()
         await interaction.response.send_modal(modal)
      
-# =========================
-# МОДАЛЬНЫЕ ОКНА (для ввода данных)
-# =========================
+#10 МОДАЛЬНЫЕ ОКНА (для ввода данных)
 
 class AIModal(Modal, title="Задать вопрос ИИ"):
     question = TextInput(
@@ -692,9 +674,7 @@ class PlayerModal(Modal, title="🔍 Поиск игрока"):
         
         await interaction.followup.send(embed=embed, ephemeral=True)
 
-# =========================
-# КОМАНДА /menu
-# =========================
+#11 КОМАНДА /menu
 
 @bot.tree.command(name="menu", description="Открыть главное меню бота")
 async def menu(interaction: discord.Interaction):
@@ -716,9 +696,7 @@ async def menu(interaction: discord.Interaction):
     view = MainMenuView()
     await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
 
-# =========================
-# ФОНОВОЕ ОБНОВЛЕНИЕ ОНЛАЙНА
-# =========================
+#12 ФОНОВОЕ ОБНОВЛЕНИЕ ОНЛАЙНА
 
 @tasks.loop(minutes=ONLINE_UPDATE_MINUTES)
 async def update_online_channel():
@@ -744,9 +722,7 @@ async def before_update():
     await bot.wait_until_ready()
 
 
-# =========================
-# ВЕБ-СЕРВЕР ДЛЯ ПОДДЕРЖАНИЯ ЖИЗНИ (KEEP-ALIVE)
-# =========================
+#13 ВЕБ-СЕРВЕР ДЛЯ ПОДДЕРЖАНИЯ ЖИЗНИ (KEEP-ALIVE)
 app = Flask('')
 
 @app.route('/')
@@ -760,9 +736,7 @@ def keep_alive():
     t = threading.Thread(target=run)
     t.start()
 
-# =========================
-# ЗАПУСК
-# =========================
+#14 ЗАПУСК
 if __name__ == "__main__":
     print("!!! ВЕРСИЯ КОДА ОБНОВЛЕНА: 16.08.2026 !!!")
     if not TOKEN:
