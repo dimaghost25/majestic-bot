@@ -3,7 +3,7 @@ import sqlite3
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 from huggingface_hub import AsyncInferenceClient
-
+from discord.ui import View, Button, Modal, TextInput
 # Загружаем переменные из .env
 load_dotenv()
 print("DEBUG TOKEN:", os.getenv("DISCORD_TOKEN"))   
@@ -421,6 +421,214 @@ async def ask(interaction: discord.Interaction, question: str):
     embed.set_footer(text=f"Запросил: {interaction.user.display_name}")
     
     await interaction.followup.send(embed=embed)
+from discord.ui import View, Button, Modal, TextInput
+
+# =========================
+# КНОПОЧНОЕ МЕНЮ
+# =========================
+
+class MainMenuView(View):
+    def __init__(self):
+        super().__init__(timeout=None)  # Меню не исчезает со временем
+
+    # Кнопка: Онлайн сервера
+    @discord.ui.button(label=" Онлайн", style=discord.ButtonStyle.green, custom_id="online_btn")
+    async def online_callback(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.defer()
+        srv = await get_memphis_online()
+        
+        if not srv:
+            await interaction.followup.send("❌ Не удалось получить данные с API Majestic.", ephemeral=True)
+            return
+        
+        name = srv.get("name", "Memphis")
+        players = srv.get("players", srv.get("online", "—"))
+        queued = srv.get("queuedPlayers", srv.get("queue", "—"))
+        status = srv.get("status", False)
+        
+        players_str = f"{players:,}" if isinstance(players, int) else str(players)
+        queued_str = f"{queued:,}" if isinstance(queued, int) else str(queued)
+        
+        embed = discord.Embed(
+            title=f"🌆 Сервер: {name}",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="👥 Онлайн", value=f"**{players_str}** игроков", inline=True)
+        embed.add_field(name="⏳ В очереди", value=f"**{queued_str}**", inline=True)
+        embed.add_field(name=" Статус", value="Работает" if status else "Тех. работы", inline=True)
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    # Кнопка: ИИ-ассистент
+    @discord.ui.button(label="🤖 ИИ-ассистент", style=discord.ButtonStyle.blurple, custom_id="ai_btn")
+    async def ai_callback(self, interaction: discord.Interaction, button: Button):
+        # Открываем модальное окно для ввода вопроса
+        modal = AIModal()
+        await interaction.response.send_modal(modal)
+
+    # Кнопка: Доход
+    @discord.ui.button(label="💰 Доход", style=discord.ButtonStyle.success, custom_id="income_btn")
+    async def income_callback(self, interaction: discord.Interaction, button: Button):
+        modal = TransactionModal(type="income")
+        await interaction.response.send_modal(modal)
+
+    # Кнопка: Расход
+    @discord.ui.button(label="📉 Расход", style=discord.ButtonStyle.danger, custom_id="expense_btn")
+    async def expense_callback(self, interaction: discord.Interaction, button: Button):
+        modal = TransactionModal(type="expense")
+        await interaction.response.send_modal(modal)
+
+    # Кнопка: Отчёт
+    @discord.ui.button(label=" Отчёт", style=discord.ButtonStyle.primary, custom_id="report_btn")
+    async def report_callback(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.defer()
+        r = get_family_report(interaction.guild.id)
+        
+        embed = discord.Embed(
+            title="📊 Финансовый отчет семьи",
+            color=discord.Color.gold()
+        )
+        embed.add_field(name=" Баланс", value=f"**{r['balance']:,}$**", inline=False)
+        embed.add_field(name="📈 Доходы", value=f"{r['income']:,}$", inline=True)
+        embed.add_field(name="📉 Расходы", value=f"{r['expense']:,}$", inline=True)
+        
+        if r['tx']:
+            tx_text = ""
+            for t_type, amount, reason, _ in r['tx']:
+                sign = "+" if t_type == "income" else "-"
+                tx_text += f"`{sign}{amount:,}$` — {reason}\n"
+            embed.add_field(name="📜 Последние операции", value=tx_text, inline=False)
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+    # Кнопка: Найти песню
+    @discord.ui.button(label="🎵 Найти песню", style=discord.ButtonStyle.secondary, custom_id="song_btn")
+    async def song_callback(self, interaction: discord.Interaction, button: Button):
+        modal = SongModal()
+        await interaction.response.send_modal(modal)
+
+
+# =========================
+# МОДАЛЬНЫЕ ОКНА (для ввода данных)
+# =========================
+
+class AIModal(Modal, title="Задать вопрос ИИ"):
+    question = TextInput(
+        label="Твой вопрос",
+        style=discord.TextStyle.paragraph,
+        placeholder="Например: Как заработать в Majestic?",
+        required=True,
+        max_length=500
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        answer = await ask_ai(self.question.value)
+        
+        embed = discord.Embed(
+            title="🤖 ИИ-ассистент (Qwen)",
+            description=f"**Вопрос:** {self.question.value}\n\n**Ответ:** {answer}",
+            color=discord.Color.purple()
+        )
+        embed.set_footer(text=f"Запросил: {interaction.user.display_name}")
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+class TransactionModal(Modal):
+    def __init__(self, type: str):
+        super().__init__(title=f"Добавить {'доход' if type == 'income' else 'расход'}")
+        self.tx_type = type
+        self.amount = TextInput(
+            label="Сумма",
+            style=discord.TextStyle.short,
+            placeholder="Например: 25000",
+            required=True
+        )
+        self.reason = TextInput(
+            label="Причина",
+            style=discord.TextStyle.short,
+            placeholder="Например: Контракт",
+            required=True,
+            max_length=200
+        )
+        self.add_item(self.amount)
+        self.add_item(self.reason)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if not has_permission(interaction):
+            return await interaction.response.send_message("❌ Нет прав.", ephemeral=True)
+        
+        try:
+            amount = int(self.amount.value)
+        except ValueError:
+            return await interaction.response.send_message("❌ Сумма должна быть числом!", ephemeral=True)
+        
+        add_transaction(interaction.guild.id, self.tx_type, amount, self.reason.value, interaction.user.id)
+        
+        sign = "+" if self.tx_type == "income" else "-"
+        emoji = "✅" if self.tx_type == "income" else "💸"
+        
+        await interaction.response.send_message(
+            f"{emoji} {'Доход' if self.tx_type == 'income' else 'Расход'} **{amount:,}$** ({self.reason.value}) успешно записан!",
+            ephemeral=True
+        )
+
+
+class SongModal(Modal, title="🎵 Найти песню"):
+    query = TextInput(
+        label="Название песни и исполнитель",
+        style=discord.TextStyle.short,
+        placeholder="Например: Bohemian Rhapsody Queen",
+        required=True,
+        max_length=200
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        prompt = f"""Найди информацию о песне: {self.query.value}
+
+Ответь в таком формате:
+🎵 **Название:** [название]
+🎤 **Исполнитель:** [исполнитель]
+📅 **Год:** [год выпуска]
+🎼 **Жанр:** [жанр]
+
+📝 **Текст песни:**
+[первые 2-3 куплета или припев]
+
+💡 **Интересный факт:** [один интересный факт о песне]
+
+Если песня неизвестна — честно скажи об этом."""
+        
+        answer = await ask_ai(prompt)
+        
+        embed = discord.Embed(
+            title="🎵 Поиск песни",
+            description=f"**Запрос:** {self.query.value}\n\n{answer}",
+            color=discord.Color.magenta()
+        )
+        embed.set_footer(text="Данные от ИИ Qwen")
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+# =========================
+# КОМАНДА /menu
+# =========================
+
+@bot.tree.command(name="menu", description="Открыть главное меню бота")
+async def menu(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="🤖 White Kings Bot",
+        description="Выбери действие:",
+        color=discord.Color.blue()
+    )
+    embed.set_footer(text="Нажми на кнопку ниже")
+    
+    view = MainMenuView()
+    await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
 
 # =========================
 # ФОНОВОЕ ОБНОВЛЕНИЕ ОНЛАЙНА
