@@ -172,7 +172,11 @@ async def get_memphis_online():
 
 
 async def get_player_info(static_id: int):
+    print(f"DEBUG: Запрашиваю игрока {static_id}")
+    print(f"DEBUG: AUTH_TOKEN = {'есть' if AUTH_TOKEN else 'НЕТ!'}")
+    
     if not AUTH_TOKEN:
+        print("DEBUG: Токен не найден!")
         return {"error": "no_token"}
 
     headers = {
@@ -180,7 +184,12 @@ async def get_player_info(static_id: int):
         "Cookie": AUTH_TOKEN
     }
     url = f"{MAJESTIC_ID_API}/{TARGET_SERVER_ID}/{static_id}/main"
-    return await fetch_json(url, headers=headers)
+    print(f"DEBUG: URL = {url}")
+    
+    result = await fetch_json(url, headers=headers)
+    print(f"DEBUG: Результат = {result}")
+    
+    return result
 
 
 # =========================
