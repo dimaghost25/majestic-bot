@@ -525,7 +525,7 @@ class MainMenuView(View):
         modal = SongModal()
         await interaction.response.send_modal(modal)
      
-      # Кнопка: Поиск игрока
+    # Кнопка: Поиск игрока
     @discord.ui.button(label="🔍 Игрок", style=discord.ButtonStyle.secondary, custom_id="player_btn")
     async def player_callback(self, interaction: discord.Interaction, button: Button):
         modal = PlayerModal()
@@ -759,8 +759,8 @@ def keep_alive():
 # =========================
 # ЗАПУСК
 # =========================
-   print("!!! ВЕРСИЯ КОДА ОБНОВЛЕНА: 16.08.2026 !!!")
 if __name__ == "__main__":
+    print("!!! ВЕРСИЯ КОДА ОБНОВЛЕНА: 16.08.2026 !!!")
     if not TOKEN:
         print("❌ ОШИБКА: Укажи DISCORD_TOKEN в .env файле!")
     else:
