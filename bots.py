@@ -366,8 +366,58 @@ async def player(interaction: discord.Interaction, static_id: int):
         await interaction.followup.send(
             f"❌ Ошибка API: {data.get('errorDescription', 'Игрок не найден или нет доступа')}"
         )
-        return
+       return
 
+@bot.tree.command(name="testplayer", description="ТЕСТ: Информация об игроке (НОВАЯ ВЕРСИЯ)")
+@app_commands.describe(static_id="Static ID игрока")
+async def test_player(interaction: discord.Interaction, static_id: int):
+    # ЭТОТ ПРИНТ ДОЛЖЕН ПОЯВИТЬСЯ В ЛОГАХ 100%, ЕСЛИ КОМАНДА СРАБОТАЛА
+    print(f"🚨🚨🚨 КОМАНДА /testplayer ВЫЗВАНА! Static ID: {static_id} 🚨🚨🚨")
+    
+    await interaction.response.defer()
+    
+    print(f"DEBUG: Запрашиваю игрока {static_id}")
+    print(f"DEBUG: AUTH_TOKEN = {'есть' if AUTH_TOKEN else 'НЕТ!'}")
+    
+    if not AUTH_TOKEN:
+        print("DEBUG: Токен не найден!")
+        return await interaction.followup.send("⚠️ Для просмотра профилей нужен AUTH_TOKEN в настройках бота.", ephemeral=True)
+
+    headers = {
+        "Authorization": f"Bearer {AUTH_TOKEN}",
+        "Cookie": AUTH_TOKEN,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*"
+    }
+    url = f"{MAJESTIC_ID_API}/{TARGET_SERVER_ID}/{static_id}/main"
+    print(f"DEBUG: URL = {url}")
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                print(f"DEBUG: https://... -> статус {resp.status}")
+                if resp.status != 200:
+                    text = await resp.text()
+                    print(f"DEBUG: Текст ошибки от API: {text}")
+                    return await interaction.followup.send(f"❌ Ошибка API. Статус: {resp.status}", ephemeral=True)
+                
+                data = await resp.json()
+                print(f"DEBUG: Результат = {data}")
+                
+                if not data.get("status"):
+                    return await interaction.followup.send(f"❌ Ошибка: {data.get('errorDescription', 'Игрок не найден')}", ephemeral=True)
+                
+                res = data.get("result", {})
+                embed = discord.Embed(title=f"👤 Профиль игрока", color=discord.Color.blue())
+                embed.add_field(name="🆔 Static ID", value=f"`{static_id}`", inline=True)
+                embed.add_field(name="👤 Никнейм", value=res.get("name", "Неизвестно"), inline=True)
+                
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                
+    except Exception as e:
+        print(f"DEBUG: Исключение при запросе: {e}")
+        await interaction.followup.send(f"❌ Произошла ошибка: {e}", ephemeral=True)
+ 
     res = data.get("result", {})
     embed = discord.Embed(
         title=f"Профиль игрока (Static ID: {static_id})",
