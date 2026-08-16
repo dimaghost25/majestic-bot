@@ -2,17 +2,20 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 from dotenv import load_dotenv
-from huggingface_hub import AsyncInferenceClient
-from discord.ui import View, Button, Modal, TextInput
-# Загружаем переменные из .env
-load_dotenv()
-print("DEBUG TOKEN:", os.getenv("DISCORD_TOKEN"))   
-import aiohttp
+
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
+from discord.ui import View, Button, Modal, TextInput  # <-- Теперь это ПОСЛЕ import discord
+
+from huggingface_hub import AsyncInferenceClient
+import aiohttp
 from flask import Flask
 import threading
+
+# Загружаем переменные из .env
+load_dotenv()
+print("DEBUG TOKEN:", os.getenv("DISCORD_TOKEN"))   
  
 # =========================
 # НАСТРОЙКИ ИЗ .env
